@@ -4,7 +4,7 @@
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
 //Description       :   PV电压混合模式标量卡尔曼观测器(10Hz)，估CCM权重alpha
-//                      除法/开方统一例化多拍 AlgoDiv (§6.3 ROCA start/done 握手)
+//                      除法/开方统一例化多拍 AlgoDiv（iStart/oDone 握手）
 //                      z 链路(纯输入函数): 每除法一个独立 AlgoDiv, 空闲自动重启
 //                      连续跟踪; KF(有状态反馈): 共享一个 AlgoDiv 顺序 alpha->P,
 //                      以除法完成为步进提交(避免滞后商反复提交导致振荡)

@@ -3,7 +3,7 @@
 //Moudle Name       :   CompDogi.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.06
-/*Description       :   双 SOGI-FLL（DSOGI-FLL）两相(α/β)频率锁定环, 对齐 C 参考结构。
+/*Description       :   双 SOGI-FLL（DSOGI-FLL）两相(α/β)频率锁定环。
                         结构: 双 SOGI(α/β 轴, 例化 CompSogi) -> 残差 eps=v-v' ->
                         频率误差 N=eps_a*v2a+eps_b*v2b (v2=滞后90正交) / Vsq 归一
                         -> FLL dw=-gamma*N/Vsq（限幅 ±2pi*10Hz）-> w_est=w_nom+dw

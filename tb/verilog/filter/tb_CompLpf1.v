@@ -3,13 +3,9 @@
 //Moudle Name       :   tb_CompLpf1.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.06
-/*Description       :   CompLpf1 一阶巴特沃斯低通单元 TB（fc=10Hz, fs=5kHz, 系数 Q15）。
-                        校验: 直流 16384 通过(均值 16384*DC增益1.0024 ≈16424, 容差±1.2%)；
-                        100Hz(10*fc) 正弦(幅8000) 明显衰减(幅比≈0.0996, 期望0.04~0.20)。
-                        手段: 尾窗 sum^2 判幅比、均值判直流。打印 PASS/FAIL。
-                        【流水化适配】DUT 现为多拍流水（LATENCY=4）：
-                        iEn 改为单拍脉冲逐样本喂入，oYOut 在 oValid 拉高时采样；
-                        喂入样本序列与断言数值与改造前完全一致。
+/*Description       :   CompLpf1 一阶巴特沃斯低通单元 TB（默认 fc=10Hz, fs=5kHz）。
+                        校验: 直流 16384 通过；100Hz 正弦对 fc=10 衰减≈0.1；
+                        另例化 FC=100 时 100Hz 幅比≈0.707（证明 FS/FC 编译期改系数）。
 */
 //------------------------------------------------------------------------------
 //Version           :   Rev 0.1
@@ -36,6 +32,11 @@ module TbCompLpf1;
 
     CompLpf1 U_Dut (
         .iSysClk(clk), .iSysRst(iSysRst), .iEn(en), .iXIn(x), .oYOut(y), .oValid(vld)
+    );
+    wire signed [W-1:0] y_fc;
+    wire                vld_fc;
+    CompLpf1 #(.FC(100), .FS(5000)) U_DutFc (
+        .iSysClk(clk), .iSysRst(iSysRst), .iEn(en), .iXIn(x), .oYOut(y_fc), .oValid(vld_fc)
     );
 
     always #5 clk = ~clk;
@@ -107,6 +108,33 @@ module TbCompLpf1;
         else begin
             $display("FAIL 100Hz 衰减 amp-ratio=%.4f", gain);
             fail = fail + 1;
+        end
+
+        // ---- 测试3: 同 100Hz 激励，FC=100 的例化应接近 -3dB（证明 FS/FC 编译期改系数） ----
+        begin : fc_sweep
+            real sux2f, suy2f, gain_fc;
+            sux2f = 0.0; suy2f = 0.0;
+            reinit;
+            for (s = 0; s < 3000 + 4000; s = s + 1) begin
+                idx = s % PER_100;
+                sv  = $sin(2.0 * 3.141592653589793 * $itor(idx) / $itor(PER_100));
+                xv  = $rtoi($itor(A_SIN) * sv);
+                x   = xv;
+                en = 1; @(posedge clk); #1; en = 0;
+                while (!vld_fc) begin @(posedge clk); #1; end
+                if (s >= 3000) begin
+                    sux2f = sux2f + $itor($signed(xv)) * $itor($signed(xv));
+                    suy2f = suy2f + $itor($signed(y_fc)) * $itor($signed(y_fc));
+                end
+            end
+            gain_fc = (sux2f > 0.0) ? $sqrt(suy2f / sux2f) : 0.0;
+            if (gain_fc > 0.55 && gain_fc < 0.85)
+                $display("  ok FC=100 编译期改系数  100Hz amp-ratio=%.4f (理论≈0.707)",
+                         gain_fc);
+            else begin
+                $display("FAIL FC=100 编译期改系数 amp-ratio=%.4f 期望≈0.707", gain_fc);
+                fail = fail + 1;
+            end
         end
 
         if (fail == 0) $display("PASS CompLpf1");

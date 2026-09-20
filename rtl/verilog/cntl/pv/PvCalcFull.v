@@ -5,7 +5,7 @@
 //Creation Date     :   2026.09.05
 //Description       :   完整PvCalcFull单模块：均值窗/LPF调理+软启参考+三环保护型P
 //                      与CCM/DCM占空比融合+MPPT前瞻(5kHz,单模块仿真通路)
-//                      除法统一例化多拍 AlgoDiv/AlgoSqrt (§6.3 ROCA start/done)
+//                      除法/开方统一例化多拍 AlgoDiv/AlgoSqrt（iStart/oDone）
 //                      控制链每除法一个独立 AlgoDiv/AlgoSqrt(独立握手,空闲自动重启
 //                      连续跟踪,oDone打一拍后采商); 窗口均值专用除法(窗满事件触发)
 //                      除法无关积分(LPF/窗口累加/软启/MPPT前馈入 rOvrefVu) 多拍流水:

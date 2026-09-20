@@ -3,7 +3,7 @@
 //Moudle Name       :   AlgoSqrt.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.06
-/*Description       :   整数开方库（多拍逐位迭代，start/done 握手，参照 ROCA 接口风格）
+/*Description       :   整数开方库（多拍逐位迭代，iStart/oDone 握手，可综合）
 //                      输出 = floor(sqrt(iNum))。业务禁止组合开方，统一例化本库(§6.3)。
 //  接口: iStart 脉冲启动 -> oBusy=1 期间逐拍迭代(OW 拍) -> oDone 拉一拍后采 oRoot。
 //        busy 期间 iStart 被忽略，调用方须等 oDone 后再发新请求。
@@ -17,7 +17,9 @@
 //modifier          :
 //Modify Date       :
 /*Modify Record     :
-*/ 余数为-当前根平方;试减量：假设下一位取1，平方需增加的数；余数-试减量为1时，该位取1
+                        余数为-当前根平方;试减量: 假设下一位取1，平方需增加的数;
+                        余数-试减量为1时，该位取1
+*/
 //------------------------------------------------------------------------------
 
 `include "algo_types.vh"

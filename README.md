@@ -1,30 +1,35 @@
 # Algorithm_Framework_HDL
 
-电力电子控制算法的 **可综合 HDL 库**（Verilog，命名对齐 `FPGA_standard` Rev 1.5：PascalCase 模块 + `i/o/r/w` 前缀 + `U_` 实例 + 高有效复位 `iSysRst`）。
+面向 FPGA 的电力电子 / 电机控制 **可综合 Verilog 算法库**（命名对齐 `FPGA_standard` Rev 1.5：PascalCase 模块 + `i/o/r/w` 前缀 + `U_` 实例 + 高有效复位 `iSysRst`）。
 
-对应 C 侧 `Algorithm_Framework/AlgoFw`（仅作算法规格参考，结构/公式对齐、定点化），并作为配置的**单一来源**：
-- `rtl/include/pv_cfg.vh`、`rtl/include/algo_types.vh`、`rtl/include/algo_arith.vh` 供本库与仿真 demo（`Algo_Demo_pv_HDL`）共同 `-I` 引用。
-- 实现规范 `docs/HDL_IMPL_CONVENTIONS.md`、命名契约 `docs/FPGA_STD_RENAME_SPEC.md`。
+本仓即算法规格与实现的**单一来源**：定点、流水、可综合 RTL；配置头统一放 `rtl/include/`。
+- 共享头：`pv_cfg.vh` / `inv3ph_cfg.vh` / `algo_types.vh` / `algo_arith.vh` / `algo_filt_coef.vh`
+- 实现规范 `docs/HDL_IMPL_CONVENTIONS.md`、命名契约 `docs/FPGA_STD_RENAME_SPEC.md`
 
 ## 目录
 
 ```
 Algorithm_Framework_HDL/
-├── rtl/include/             pv_cfg.vh, algo_types.vh, algo_arith.vh
+├── rtl/include/             pv_cfg.vh, algo_types.vh, algo_arith.vh, algo_filt_coef.vh
 ├── rtl/verilog/
 │   ├── math/                AlgoSqrt / AlgoDiv / AlgoTrig(+mem)
 │   ├── controller/          CompPi / CompPr / CompPir（双线性离散）
-│   ├── filter/              标量滤波 + 巴特沃斯低通（见下表）
+│   ├── filter/              标量滤波 + 巴特沃斯（FS/FC 编译期算系数）
 │   ├── transform/           Clark / Park / 正负序分离
 │   ├── ortho/               SOGI / 直流提取 / PLL / FLL
 │   ├── corr/                GCC / XCorr 互相关
 │   ├── fft/                 CompFft（基-2 DIT）
 │   ├── power/               前馈解耦 / 软启 / 死区
-│   └── cntl/pv/             PV 控制链（见下表）
+│   └── cntl/
+│       ├── pv/              PV 控制链
+│       └── inv3ph/          三相逆变器（故障/状态机/电压电流环/软启）
 ├── tb/verilog/              每模块单元 TB（按功能分目录）
+├── docs/                    使用指南 / 实现规范 / 命名契约 / 逆变·LLC·DAB 分册
 ├── reviews/                 代码审查报告
 └── Makefile                 analyze / lint / unit
 ```
+
+**使用指南（例化、握手、注意事项）：** [`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md)
 
 ## 已实现模块（2026-09-06）
 
@@ -39,6 +44,17 @@ Algorithm_Framework_HDL/
 | `PvStateSys` | 系统 5 态 FSM（三段式） | PASS |
 | `PvStateCh` | 通道 4 态 FSM + valid 计数（三段式） | PASS |
 | `PvObserver` | 清洗版标量 KF（CCM/DCM 混合系数 + Voc） | PASS |
+
+### cntl/inv3ph（三相逆变器 FPGA 控制链）
+| 模块 | 说明 | 单测 |
+|------|------|------|
+| `Inv3phFault` | 快检：母线欠/过压、相电压/电流过限、短路锁存 | PASS |
+| `Inv3phState` | 8 态 FSM（IDLE…CONNECTED…ERR）+ PWM/继电器/并网模式 | PASS |
+| `Inv3phVloop` | dq 电压环（`CompPi`×2 + L2/C1 前馈） | PASS |
+| `Inv3phIloop` | dq 电流环（`CompPi`×2 + `CompFfDecouple`，SEQ±1/0） | PASS |
+| `Inv3phSoftStart` | 开环幅值软启（`CompSoftStart`） | PASS |
+
+配置头：`rtl/include/inv3ph_cfg.vh`。控制方案对比见 [`docs/INV3PH_ALGO_COMPARE.md`](docs/INV3PH_ALGO_COMPARE.md)。
 
 ### controller（电力电子控制器，双线性离散）
 | 模块 | 说明 | 单测 |
@@ -104,12 +120,21 @@ Algorithm_Framework_HDL/
 
 ## 使用约定
 
-- 头文件只放 `rtl/include/`；模块用 `` `include "pv_cfg.vh" `` / `"algo_types.vh"`。
-- 可综合铁律：无 `real` 运算通路；**除法/开方统一例化 `AlgoDiv`/`AlgoSqrt` 数学库**（规范 §6.3，多拍 `iStart/oDone` 握手，参照 ROCA `SignedDivision`），业务模块禁止组合除法/自行摊开。
-- 命名遵循 `FPGA_standard` + `AI_HDL_RTL_Development_Guideline`（详见 `docs/FPGA_STD_RENAME_SPEC.md`）。
+- **完整使用指南**：[`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md)（接口握手、滤波器编译期系数、选型表、踩坑清单）。
+- 头文件只放 `rtl/include/`；模块用 `` `include "pv_cfg.vh" `` / `"inv3ph_cfg.vh"` / `"algo_types.vh"` / `"algo_filt_coef.vh"`。
+- 可综合铁律：无 `real` 运算通路；**除法/开方统一例化 `AlgoDiv`/`AlgoSqrt` 数学库**（规范 §6.3，多拍 `iStart/oDone` 握手），业务模块禁止组合除法/自行摊开。
+- 频率类滤波器：`FS`/`FC`/`F0` 等为 **parameter 编译期设定**，系数 elabor 自动算，**不允许在线改**。
+- 命名遵循 `FPGA_standard`（详见 `docs/FPGA_STD_RENAME_SPEC.md`）。
 
 ## 文档
 
-方案与工作流见 `Algo_Demo_pv_HDL`（闭环仿真仓）的 README 与
-`/home/win/wsl-proj/Algo_HDL_Sim/docs/方案总览.md`（权威总览）、
-`/home/win/wsl-proj/FPGA_standard/FPGA编程标准与规范.md`（编码规范原文）。
+| 文档 | 内容 |
+|------|------|
+| [`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md) | **使用指南**（推荐先读） |
+| [`docs/HDL_IMPL_CONVENTIONS.md`](docs/HDL_IMPL_CONVENTIONS.md) | 实现硬性规则 |
+| [`docs/FPGA_STD_RENAME_SPEC.md`](docs/FPGA_STD_RENAME_SPEC.md) | 命名契约 |
+| [`docs/INV3PH_ALGO_COMPARE.md`](docs/INV3PH_ALGO_COMPARE.md) | 三相 DQ vs 三独立单相控制（FPGA 选型） |
+| [`docs/LLC_CTRL_FRAMEWORK.md`](docs/LLC_CTRL_FRAMEWORK.md) | LLC 难点、策略与算法框架（对齐逆变对比文档深度） |
+| [`docs/DAB_CTRL_FRAMEWORK.md`](docs/DAB_CTRL_FRAMEWORK.md) | DAB 难点、策略与算法框架（V–i_L 双环） |
+
+编码风格以 `docs/FPGA_STD_RENAME_SPEC.md` 为准；闭环联调可另建 FPGA 仿真/板级工程引用本库。

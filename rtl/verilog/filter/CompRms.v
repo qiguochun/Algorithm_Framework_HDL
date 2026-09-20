@@ -3,11 +3,11 @@
 //Moudle Name       :   CompRms.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   窗口 RMS 均方根（C Comp_Rms 平方累加核心，固定 N 样本窗）。
+/*Description       :   窗口 RMS 均方根（平方累加核心，固定 N 样本窗）。
                         acc += x^2 每样本；每累计 N 个样本输出 rms = sqrt(acc/N) 并复位。
                         信号 S0.(W-1) 有符号，平方累加用 64bit；N 样本窗由参数决定。
                         rms = sqrt(acc/N) 统一例化 AlgoDiv/AlgoSqrt（多拍 start/done 握手，
-                        参照 ROCA，禁止组合除法）。除运算在窗口边界起算，忙期持续多拍，
+                        禁止组合除法）。除运算在窗口边界起算，忙期持续多拍，
                         完成后 oRmsValid 拉一拍并更新 oRmsVal（结果滞后若干拍，逐窗刷新）。
 */
 //------------------------------------------------------------------------------

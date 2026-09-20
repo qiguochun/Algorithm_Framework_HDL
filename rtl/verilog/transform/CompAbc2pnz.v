@@ -3,7 +3,7 @@
 //Moudle Name       :   CompAbc2pnz.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   三相 ABC -> 正序/负序分量分解（等功率 Clarke + AFP + 合成，对齐 C Comp_ABCtoPNZ）。
+/*Description       :   三相 ABC -> 正序/负序分量分解（等功率 Clarke + AFP + 合成）。
                         Clarke(Power)->alpha,beta,zero；
                         AFP 一阶全通 90 度移相: y[n]=-0.9844x[n]+x[n-1]+0.9844y[n-1]；
                         alpha_p=(alpha-beta_AFP)/2, beta_p=(beta+alpha_AFP)/2, zero_p=(zero+zero_AFP)/2；

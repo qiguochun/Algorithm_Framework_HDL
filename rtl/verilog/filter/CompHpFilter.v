@@ -4,10 +4,10 @@
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
 /*Description       :   一阶高通滤波器（Tustin/双线性，IIR）。
-                        算法对齐 C Comp_HPFilter：tau=1/(2pi*fc), k=1/(pi*fc*Ts)=FS/(pi*fc)
+                        一阶高通：tau=1/(2pi*fc), k=1/(pi*fc*Ts)=FS/(pi*fc)
                         coeff_a=(k-1)/(k+1), coeff_b=k/(k+1)；
                         y[n]=a*y[n-1]+b*(x[n]-x[n-1])。
-                        信号 S0.(W-1) 有符号；系数 Q0.FSHIFT 整数；输出饱和限幅。直流增益=0。
+                        系数由 parameter FS/FC 在 elabor 期按 k=FS/(pi*FC) 算出。直流增益=0。
                         【多拍流水】差分/前馈乘法一拍、反馈乘法一拍、求和一拍、
                         量化/饱和一拍，共 LATENCY=4 拍；iEn 单拍脉冲采样，完成后 oValid 高。
                         数值与单周期组合实现逐位等价（仅延后 LATENCY 拍）。
@@ -21,11 +21,9 @@
 //------------------------------------------------------------------------------
 module CompHpFilter #(
     parameter integer W        = 16,     // 信号位宽(有符号)
-    parameter integer FC       = 500,    // 截止频率 Hz（文献/顶层参考）
-    parameter integer FS       = 50000,  // 采样率 Hz，Ts=1/FS（文献/顶层参考）
-    parameter integer FSHIFT   = 15,     // 系数 Q0.FSHIFT 小数位
-    parameter integer COEF_A   = 30772,  // (k-1)/(k+1) *2^FSHIFT，k=FS/(pi*FC)
-    parameter integer COEF_B   = 31770   //  k/(k+1)    *2^FSHIFT
+    parameter integer FC       = 500,    // 截止频率 Hz
+    parameter integer FS       = 50000,  // 采样率 Hz，Ts=1/FS
+    parameter integer FSHIFT   = 15      // 系数 Q0.FSHIFT 小数位
 ) (
     input  wire                iSysClk,  // 时钟
     input  wire                iSysRst,  // 复位（高有效）
@@ -34,6 +32,10 @@ module CompHpFilter #(
     output reg  signed [W-1:0] oYOut,    // 高通输出
     output reg                 oValid    // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
+    `include "algo_filt_coef.vh"
+    localparam integer COEF_A = fn_hpf1_a(FS, FC, FSHIFT); // (k-1)/(k+1), k=FS/(pi*FC)
+    localparam integer COEF_B = fn_hpf1_b(FS, FC, FSHIFT); // k/(k+1)
+
     localparam integer LATENCY = 4;                       // 一阶 IIR 流水拍数
     localparam signed [63:0] MAXS = (64'sd1 << (W-1)) - 1;  // 上限
     localparam signed [63:0] MINS = -(64'sd1 << (W-1));     // 下限

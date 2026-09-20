@@ -33,7 +33,7 @@ module TbCompRep;
     );
     always #5 clk = ~clk;
 
-    // ---- 软件镜像模型 ----
+    // ---- 定点参考模型（TB only）----
     integer moBuf [0:N-1];
     integer moP;
     integer s;

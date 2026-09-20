@@ -3,7 +3,7 @@
 //Moudle Name       :   AlgoDiv.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.06
-/*Description       :   有符号恢复除法库（多拍迭代，start/done 握手，参照 ROCA SignedDivision）
+/*Description       :   有符号恢复除法库（多拍迭代，iStart/oDone 握手，可综合）
 //                      业务禁止组合除法，统一例化本库(§6.3)。
 //  接口: iStart 脉冲启动 -> oBusy=1 期间逐拍迭代(W 拍) -> oDone 拉一拍后采 oQuot。
 //        busy 期间 iStart 被忽略，调用方须等 oDone 后再发新请求。

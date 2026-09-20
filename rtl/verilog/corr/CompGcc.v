@@ -3,12 +3,12 @@
 //Moudle Name       :   CompGcc.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   广义互相关方向检测, 递推 EWMA 版 (C Comp_GCC_Recursive, lag=0)。
+/*Description       :   广义互相关方向检测，递推 EWMA 版（lag=0）。
                         dx=x-mean_x, dy=y-mean_y；mean<-a*mean+b*x；var<-a*var+b*dx^2；
                         cov<-a*cov+b*dx*dy；rho=cov/sqrt(var_x*var_y) 夹到 [-1,1]。
                         |rho|<thr->UNKNOWN(0)；rho>0->SAME(1)；rho<0->OPPOSITE(-1)。
                         信号 S0.(W-1) 有符号。平方根/除法统一例化 AlgoSqrt/AlgoDiv
-                        （多拍 start/done 握手，参照 ROCA，禁止组合除法）。EWMA 状态逐拍
+                        （多拍 iStart/oDone 握手，禁止组合除法）。EWMA 状态逐拍
                         更新，rho 后台计算完成即刷新（结果滞后若干拍，准静态段方向不变）。
 */
 //------------------------------------------------------------------------------

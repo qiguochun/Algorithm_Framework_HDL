@@ -7,7 +7,7 @@
                         连续 H(s)=wc/(s+wc)，s=2fs*(z-1)/(z+1) 直接代入离散 ->
                         差分 y[n]=b0*x[n]+b1*x[n-1]-a1*y[n-1]，
                         b0=b1=wc/(2fs+wc)，a1=(wc-2fs)/(wc+2fs)，wc=2*pi*fc。
-                        fc/fs 隐含于 Q 系数 localparam（默认 fc=10Hz, fs=5kHz，Python 验证）。
+                        系数由 parameter FS/FC 在 elabor 期按上式整数定点算出（默认 fc=10Hz, fs=5kHz）。
                         系数 Q15; 状态带 STATEFRAC 位小数避免 DC 死区偏置;
                         输出 Q0 舍入+饱和 S16。
                         【多拍流水】乘法一拍(并行)、加法一拍、量化/饱和一拍、状态更新一拍，
@@ -23,13 +23,10 @@
 //------------------------------------------------------------------------------
 module CompLpf1 #(
     parameter integer W          = 16,     // 信号位宽(有符号)
-    parameter integer FC         = 10,     // 截止频率 Hz（文献/顶层参考，wc=2*pi*FC）
-    parameter integer FS         = 5000,   // 采样率 Hz（文献/顶层参考，Ts=1/FS）
+    parameter integer FC         = 10,     // 截止频率 Hz，wc=2*pi*FC
+    parameter integer FS         = 5000,   // 采样率 Hz，Ts=1/FS
     parameter integer FSHIFT     = 15,     // 系数 Q0.FSHIFT 小数位
-    parameter integer STATEFRAC  = 15,     // 状态(反馈)额外小数位，防 DC 死区
-    parameter integer COEF_B0    = 205,    // b0=wc/(2fs+wc)=0.00624395 *2^15  Q15
-    parameter integer COEF_B1    = 205,    // b1=wc/(2fs+wc)=0.00624395 *2^15  Q15(=b0)
-    parameter integer COEF_A1    = -32359  // a1=(wc-2fs)/(wc+2fs)=-0.98751209 *2^15  Q15
+    parameter integer STATEFRAC  = 15      // 状态(反馈)额外小数位，防 DC 死区
 ) (
     input  wire                iSysClk,  // 时钟
     input  wire                iSysRst,  // 复位（高有效）
@@ -38,10 +35,10 @@ module CompLpf1 #(
     output reg  signed [W-1:0] oYOut,    // 低通输出 y[n]
     output reg                 oValid    // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
-    // ---- Python 验证(Q15, fc=10Hz, fs=5000) ----
-    // b0=b1=0.00624395, a1=-0.98751209 -> DC 增益 (b0+b1)/(1+a1)=1.0024;
-    // |H(e^{jw})| @100Hz ≈ 0.0996（理论 -3dB@10Hz，十倍频 -20dB/dec）。
-    // 状态 R=y*2^STATEFRAC，分子 num 在 (2^FSHIFT*2^STATEFRAC) 域。
+    `include "algo_filt_coef.vh"
+    localparam integer COEF_B0 = fn_lpf1_b(FS, FC, FSHIFT); // b0=wc/(2fs+wc) Q.FSHIFT
+    localparam integer COEF_B1 = COEF_B0;                   // b1=b0
+    localparam integer COEF_A1 = fn_lpf1_a(FS, FC, FSHIFT); // a1=(wc-2fs)/(wc+2fs)
 
     localparam integer LATENCY = 4;                        // 一阶 IIR 流水拍数
     localparam signed [63:0] YMAX = (64'sd1 << (W-1)) - 1;  // 输出上限 32767

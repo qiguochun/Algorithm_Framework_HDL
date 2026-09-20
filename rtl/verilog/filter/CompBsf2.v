@@ -11,8 +11,7 @@
                         分母 z^0..z^2 系数 = C,(2w0^2-2K^2),(K^2-(w0/Q)K+w0^2) ->
                         a1=(2w0^2-2K^2)/C, a2=(K^2-(w0/Q)K+w0^2)/C。
                         差分 y[n]=b0*x[n]+b1*x[n-1]+b2*x[n-2]-a1*y[n-1]-a2*y[n-2]。
-                        f0/fs/Q 隐含于 Q 系数 localparam（默认 f0=250Hz, fs=5kHz, Q=0.707，
-                        Python 推导）。阻带中心深度陷波，直流/远离中心增益->1。
+                        系数由 parameter FS/F0/QREF 在 elabor 期按上式整数定点算出（默认 f0=250Hz, fs=5kHz, Q=0.707）。
                         系数 Q20; 状态带 STATEFRAC 位小数避免直流死区偏置;
                         输出 Q0 舍入+饱和 S16。
 */
@@ -25,16 +24,11 @@
 //------------------------------------------------------------------------------
 module CompBsf2 #(
     parameter integer W          = 16,     // 信号位宽(有符号)
-    parameter integer F0         = 250,    // 阻带中心(陷波)频率 Hz（文献/顶层参考）
+    parameter integer F0         = 250,    // 阻带中心(陷波)频率 Hz
     parameter integer QREF       = 707,    // 品质因数 Q*1000（默认 0.707）
-    parameter integer FS         = 5000,   // 采样率 Hz（文献/顶层参考，Ts=1/FS）
+    parameter integer FS         = 5000,   // 采样率 Hz，Ts=1/FS
     parameter integer FSHIFT     = 20,     // 系数 Q0.FSHIFT 小数位
-    parameter integer STATEFRAC  = 15,     // 状态(反馈)额外小数位，防 DC 死区
-    parameter integer COEF_B0    = 861751,   // b0=Cn/C         =0.82182975 *2^20  Q20
-    parameter integer COEF_B1    = -1640499, // b1=(2w0^2-2K^2)/C=-1.56450131 *2^20 Q20
-    parameter integer COEF_B2    = 861751,   // b2=Cn/C(=b0)                    Q20
-    parameter integer COEF_A1    = -1640499, // a1=(2w0^2-2K^2)/C=-1.56450131 *2^20 Q20
-    parameter integer COEF_A2    = 674926    // a2=(K^2-(w0/Q)K+w0^2)/C=0.64365951 *2^20 Q20
+    parameter integer STATEFRAC  = 15      // 状态(反馈)额外小数位，防 DC 死区
 ) (
     input  wire                iSysClk,  // 时钟
     input  wire                iSysRst,  // 复位（高有效）
@@ -43,6 +37,13 @@ module CompBsf2 #(
     output reg  signed [W-1:0] oYOut,    // 带阻(陷波)输出 y[n]
     output reg                 oValid    // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
+    `include "algo_filt_coef.vh"
+    localparam integer COEF_B0 = fn_bsf2_b0(FS, F0, QREF, FSHIFT);
+    localparam integer COEF_B1 = fn_bpf2_a1(FS, F0, QREF, FSHIFT); // b1=a1=(2w0^2-2K^2)/C
+    localparam integer COEF_B2 = COEF_B0;
+    localparam integer COEF_A1 = COEF_B1;
+    localparam integer COEF_A2 = fn_bpf2_a2(FS, F0, QREF, FSHIFT);
+
     localparam integer LATENCY = 6;                        // 二阶 IIR 流水拍数
     localparam signed [63:0] YMAX = (64'sd1 << (W-1)) - 1;  // 输出上限 32767
     localparam signed [63:0] YMIN = -(64'sd1 << (W-1));     // 输出下限 -32768

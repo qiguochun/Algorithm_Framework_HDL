@@ -3,10 +3,10 @@
 //Moudle Name       :   CompDiff.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   带低通的微分器（两级 Tustin，C Comp_Diff_Execute 语义）。
-                        Stage1 LPF(wc): a1=wc_d/(2+wc_d), b1=(2-wc_d)/(2+wc_d), y1=a1(u[k]+u[k-1])+b1*y1[k-1]
-                        Stage2 Diff(N): a2=2N/(2+N*Ts), b2=(2-N*Ts)/(2+N*Ts), y2=a2(y1-y1[k-1])+b2*y2[k-1]
-                        信号 S0.(W-1) 有符号；a2 量值可能>1 用 A2Q/A2SH 单独表示。
+/*Description       :   带低通的微分器（两级 Tustin 离散）。
+                        Stage1 LPF: wc_d=2*pi*FC/FS, a1=wc_d/(2+wc_d), b1=(2-wc_d)/(2+wc_d)
+                        Stage2 Diff: a2=2N/(2+N/FS), b2=(2-N/FS)/(2+N/FS)
+                        系数由 parameter FS/FC/N 在 elabor 期整数定点算出（默认 fs=100Hz, fc=19Hz, N=50）。
                         输出为对采样时刻求导结果（单位=信号/秒）；斜坡输入稳态≈斜率。
                         【多拍流水】两级各 4 拍串行（级间依赖 y1 先行算出），共 LATENCY=8 拍：
                         Stage1 加/乘法(并行)、乘法、加法、量化一拍；
@@ -22,12 +22,10 @@
 //------------------------------------------------------------------------------
 module CompDiff #(
     parameter integer W        = 16,     // 信号位宽(有符号)
-    parameter integer FSHIFT   = 15,     // a1/b1/b2 的 Q0.FSHIFT 小数位
-    parameter integer A1Q      = 12288,  // a1*2^FSHIFT (wc_d=1.2 -> a1=0.375)
-    parameter integer B1Q      = 8192,   // b1*2^FSHIFT (b1=0.25)
-    parameter integer A2Q      = 40,     // a2*2^A2SH  (a2 = 2N/(2+N*Ts))
-    parameter integer A2SH     = 0,      // a2 的小数位
-    parameter integer B2Q      = 19661   // b2*2^FSHIFT (b2=0.6)
+    parameter integer FS       = 100,    // 采样率 Hz，Ts=1/FS
+    parameter integer FC       = 19,     // 前置 LPF 截止频率 Hz（wc_d=2*pi*FC/FS）
+    parameter integer N        = 50,     // 微分器时间常数 N
+    parameter integer FSHIFT   = 15      // a1/b1/b2 的 Q0.FSHIFT 小数位
 ) (
     input  wire                iSysClk,  // 时钟
     input  wire                iSysRst,  // 复位（高有效）
@@ -36,6 +34,13 @@ module CompDiff #(
     output reg  signed [W-1:0] oYOut,    // 微分输出
     output reg                 oValid    // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
+    `include "algo_filt_coef.vh"
+    localparam integer A1Q  = fn_diff_a1(FS, FC, FSHIFT);
+    localparam integer B1Q  = fn_diff_b1(FS, FC, FSHIFT);
+    localparam integer A2Q  = fn_diff_a2(FS, N);       // a2 量值常>1，按整数存放
+    localparam integer A2SH = 0;
+    localparam integer B2Q  = fn_diff_b2(FS, N, FSHIFT);
+
     localparam integer LATENCY = 8;                        // 两级各4拍串行
     localparam signed [63:0] MAXS = (64'sd1 << (W-1)) - 1;  // 上限
     localparam signed [63:0] MINS = -(64'sd1 << (W-1));     // 下限

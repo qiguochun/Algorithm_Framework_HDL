@@ -4,7 +4,7 @@
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
 /*Description       :   CompPark/CompInvPark 单元 TB（公式级数值校验，θ 16bit 全幅）。
-                        d=alpha*cos+beta*sin ; q=-alpha*sin+beta*cos（与 C Comp_Park 一致）
+                        d=alpha*cos+beta*sin ; q=-alpha*sin+beta*cos
                         反 Park 回绕还原验证。
 */
 //------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 //Moudle Name       :   CompPll.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   单相 SOGI-PLL 锁相环（对齐 C Comp_Pll_Run_F32）。
+/*Description       :   单相 SOGI-PLL 锁相环。
                         结构: SOGI(50Hz Tustin 正交) -> Park(θ+w*Ts 预测角) -> 归一化误差
                         err=q/sqrt(d^2+q^2) -> PI(i+=err, dw=i*0.05+err*100, 限幅±62.8)
                         -> w=2pi*50+dw -> θ+=w*Ts -> out=cos(θ) -> kalman1d 平滑 d 与 w。

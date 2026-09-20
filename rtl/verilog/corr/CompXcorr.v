@@ -3,7 +3,7 @@
 //Moudle Name       :   CompXcorr.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   滑动窗口归一化互相关 (C Comp_XCorr_F32 滑动窗口核心)。
+/*Description       :   滑动窗口归一化互相关。
                         环形缓冲存最近 WIN_SIZE 对 (x,y)；窗口满后后台逐拍 MAC：
                         先累加 rxx/ryy，再按 tau=0..MAX_LAG 累加 Rxy[tau]，
                         再 AlgoSqrt/AlgoDiv 得 r[tau]=Rxy/sqrt(rxx*ryy)，

@@ -3,7 +3,7 @@
 //Moudle Name       :   CompLmsAlpha.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   LMS 极性系数在线估计（C Comp_LmsAlpha_F32 语义）。
+/*Description       :   LMS 极性系数在线估计。
                         e[n]=iCt[n]-a[n]*iOwn[n]；a[n+1]=a[n]+mu*e[n]*iOwn[n]。
                         系数 a 存 a*2^AFRAC，步长存 MUQ=mu*2^AFRAC；
                         iOwn/iCt 为 S0.(W-1) 有符号；内部宽位防溢出。收敛 a->alpha_true。

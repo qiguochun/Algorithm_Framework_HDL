@@ -39,8 +39,7 @@ module TbCompHpFilter;
     wire vld;
 
     CompHpFilter #(
-        .W(W), .FC(FC), .FS(FS), .FSHIFT(FSHIFT),
-        .COEF_A(31955), .COEF_B(32361)
+        .W(W), .FC(FC), .FS(FS), .FSHIFT(FSHIFT)
     ) U_Dut (
         .iSysClk(clk), .iSysRst(iSysRst), .iEn(en), .iXIn(x), .oYOut(y), .oValid(vld)
     );

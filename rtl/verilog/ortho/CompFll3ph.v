@@ -3,13 +3,13 @@
 //Moudle Name       :   CompFll3ph.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   三相 SOGI-FLL 频率锁定环（对齐 C Comp_Fll_3ph_Run_F32）。
+/*Description       :   三相 SOGI-FLL 频率锁定环。
                         结构: Clarke(Power) -> 双 SOGI(α/β) -> 正序 v_ap=0.5(v1a-v2b), v_bp=0.5(v1b+v2a)
                         -> FLL 归一化 dw=-gamma*(ea*v2a+eb*v2b)/Vsq（限幅 ±2pi*10）
                         -> w_est=w_nom+dw -> θ+=w_est*Ts -> 可选 Park(αβ->dq)。
                         信号 S16；角频率 S32 Q6(1LSB=1/64 rad/s)；θ 32bit 累加，oTheta=高16位全幅。
                         例化 CompClark / CompSogi / CompPark。
-                        除法统一例化 AlgoDiv（多拍 start/done 握手，参照 ROCA，禁止组合
+                        除法统一例化 AlgoDiv（多拍 iStart/oDone 握手，禁止组合
                         除法）：后台空闲即捕获最新 N/Vsq 快照运算，完成后刷新 rNq15（Q15
                         缩放，ZOH 滞后，准稳态环路不变）。
                         【多拍流水版】每样本一拍 iEn 触发：接受拍快照 Clarke(cl_a/cl_b)，

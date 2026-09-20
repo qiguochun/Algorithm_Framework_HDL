@@ -10,7 +10,7 @@
                         分子 =(K^2)*(z^2-2z+1) -> b0=b2=K^2/C, b1=-2K^2/C；
                         a1=(2wc^2-2K^2)/C, a2=(K^2-sqrt2 wc K+wc^2)/C。
                         差分 y[n]=b0*x[n]+b1*x[n-1]+b2*x[n-2]-a1*y[n-1]-a2*y[n-2]。
-                        fc/fs 隐含于 Q 系数 localparam（默认 fc=250Hz, fs=5kHz，Python 推导）。
+                        系数由 parameter FS/FC 在 elabor 期按上式整数定点算出（默认 fc=250Hz, fs=5kHz）。
                         直流增益=0，高频增益->1（Nyquist 增益=1）。
                         系数 Q20; 状态带 STATEFRAC 位小数避免直流死区偏置;
                         输出 Q0 舍入+饱和 S16。
@@ -24,15 +24,10 @@
 //------------------------------------------------------------------------------
 module CompHpf2 #(
     parameter integer W          = 16,     // 信号位宽(有符号)
-    parameter integer FC         = 250,    // 截止频率 Hz（文献/顶层参考，wc=2*pi*FC）
-    parameter integer FS         = 5000,   // 采样率 Hz（文献/顶层参考，Ts=1/FS）
+    parameter integer FC         = 250,    // 截止频率 Hz，wc=2*pi*FC
+    parameter integer FS         = 5000,   // 采样率 Hz，Ts=1/FS
     parameter integer FSHIFT     = 20,     // 系数 Q0.FSHIFT 小数位
-    parameter integer STATEFRAC  = 15,     // 状态(反馈)额外小数位，防 DC 死区
-    parameter integer COEF_B0    = 841002,   // b0=K^2/C    =0.80204158 *2^20  Q20
-    parameter integer COEF_B1    = -1682003, // b1=-2K^2/C  =-1.60408315 *2^20 Q20
-    parameter integer COEF_B2    = 841002,   // b2=K^2/C(=b0)               Q20
-    parameter integer COEF_A1    = -1640501, // a1=(2wc^2-2K^2)/C=-1.56450399 *2^20 Q20
-    parameter integer COEF_A2    = 674929    // a2=(K^2-sqrt2 wc K+wc^2)/C=0.64366232 *2^20 Q20
+    parameter integer STATEFRAC  = 15      // 状态(反馈)额外小数位，防 DC 死区
 ) (
     input  wire                iSysClk,  // 时钟
     input  wire                iSysRst,  // 复位（高有效）
@@ -41,6 +36,13 @@ module CompHpf2 #(
     output reg  signed [W-1:0] oYOut,    // 高通输出 y[n]
     output reg                 oValid    // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
+    `include "algo_filt_coef.vh"
+    localparam integer COEF_B0 = fn_hpf2_b0(FS, FC, FSHIFT); // b0=K^2/C
+    localparam integer COEF_B1 = fn_hpf2_b1(FS, FC, FSHIFT); // b1=-2*b0
+    localparam integer COEF_B2 = COEF_B0;
+    localparam integer COEF_A1 = fn_hpf2_a1(FS, FC, FSHIFT);
+    localparam integer COEF_A2 = fn_hpf2_a2(FS, FC, FSHIFT);
+
     localparam integer LATENCY = 6;                        // 二阶 IIR 流水拍数
     localparam signed [63:0] YMAX = (64'sd1 << (W-1)) - 1;  // 输出上限 32767
     localparam signed [63:0] YMIN = -(64'sd1 << (W-1));     // 输出下限 -32768

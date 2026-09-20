@@ -3,10 +3,10 @@
 //Moudle Name       :   CompNoiseVar.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   噪声方差递归估计（EWMA，C Comp_NoiseVar method=1）。
+/*Description       :   噪声方差递归估计（EWMA）。
                         mean[n]=a*x+(1-a)*mean[n-1]；err[n]=x-mean[n]；
                         var[n]=a*err[n]^2+(1-a)*var[n-1]；std[n]=sqrt(var[n])。
-                        信号 S0.(W-1) 有符号；alpha 用 Q0.FSHIFT 整数 ALPHAQ。
+                        alpha 由 parameter FS/FC 按 2*pi*fc/fs 在 elabor 期量化（默认 fc=25Hz, fs=5kHz -> ~1/32）。
                         多拍流水改造: 采样节拍快照 x, a*x/(1-a)*mean 两乘法并行(一拍)
                         -> mean=舍入右移、err=x-mean(一拍) -> err^2(一拍)
                         -> a*err^2/(1-a)*var 两乘法并行(一拍) -> var=舍入右移+提交(一拍)。
@@ -24,8 +24,9 @@
 //------------------------------------------------------------------------------
 module CompNoiseVar #(
     parameter integer W        = 16,      // 信号位宽(有符号)
+    parameter integer FS       = 5000,    // 采样率 Hz
+    parameter integer FC       = 25,      // EWMA 等效截止频率 Hz（alpha~2*pi*fc/fs）
     parameter integer FSHIFT   = 15,      // alpha 的小数位 Q0.FSHIFT
-    parameter integer ALPHAQ   = 1024,    // alpha*2^FSHIFT (alpha=1/32)
     parameter integer OVW      = 40,      // 方差输出位宽
     parameter integer OSW      = 32       // 标准差输出位宽
 ) (
@@ -37,6 +38,9 @@ module CompNoiseVar #(
     output wire [OSW-1:0]      oStd,      // 标准差估计
     output reg                 oValid     // 提交拍有效脉冲(采样后 LATENCY=4 拍)
 );
+    `include "algo_filt_coef.vh"
+    localparam integer ALPHAQ = fn_ewma_alpha(FS, FC, FSHIFT);
+
     localparam [FSHIFT:0] ONE_Q = (1 << FSHIFT);      // 1 的定点
     localparam [FSHIFT:0] ONE_A = ONE_Q - ALPHAQ;     // (1-alpha) 定点
 

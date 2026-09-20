@@ -3,7 +3,7 @@
 //Moudle Name       :   CompSogi.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   二阶广义积分器（SOGI）正交分量生成器（Tustin 隐式联立版，C Comp_Sogi_Run_F32_Tustin）。
+/*Description       :   二阶广义积分器（SOGI）正交分量生成器（Tustin 隐式联立版）。
                         A=(Ts/2)kwn, B=(Ts/2)wn, D=1+A+B^2；
                         va[n]=[(1-A-B^2)va[n-1]+2B*vb[n-1]+A(x[n]+x[n-1])]/D；
                         vb[n]=vb[n-1]-B(va[n]+va[n-1])。

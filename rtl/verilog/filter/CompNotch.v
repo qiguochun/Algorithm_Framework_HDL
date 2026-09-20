@@ -3,11 +3,12 @@
 //Moudle Name       :   CompNotch.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.05
-/*Description       :   II 型双线性陷波滤波器（C Comp_Notch）。
+/*Description       :   II 型双线性陷波滤波器。
                         系数公式: x=2c2 wnTs, y=2c1 wnTs, z=(wnTs)^2
                         a1=2-y, a2=y-z-1, b1=x-2, b2=z-x+1
                         y[n]=a1 y[n-1]+a2 y[n-2]+x[n]+b1 x[n-1]+b2 x[n-2]
-                        a/b 系数 S16 Q14 参数（默认 fc=100Hz, Fs=5kHz, c1=0.5, c2=0）。
+                        a/b 系数由 parameter FS/FC/C1_MILLI/C2_MILLI 在 elabor 期算成 Q14
+                        （默认 fc=100Hz, Fs=5kHz, c1=0.5, c2=0）。
                         DC 增益=1，中心频率深度陷波。
                         【多拍流水】乘法一拍(4 个乘积+输入抬位并行)、逐项求和各一拍、
                         Q14 舍入+饱和+状态更新一拍，共 LATENCY=6 拍；iEn 单拍脉冲采样一帧，
@@ -21,11 +22,12 @@
 */
 //------------------------------------------------------------------------------
 module CompNotch #(
-    parameter integer W      = 16,
-    parameter signed [15:0] P_A1 = 16'sd30709,  // a1=2-y     = 1.874336  Q14
-    parameter signed [15:0] P_A2 = -16'sd14584, // a2=y-z-1   = -0.890128 Q14
-    parameter signed [15:0] P_B1 = -16'sd32768, // b1=x-2     = -2.000000 Q14
-    parameter signed [15:0] P_B2 = 16'sd16643   // b2=z-x+1   = 1.015791  Q14
+    parameter integer W        = 16,
+    parameter integer FS       = 5000,   // 采样率 Hz
+    parameter integer FC       = 100,    // 陷波中心频率 Hz
+    parameter integer C1_MILLI = 500,    // c1*1000（阻尼，默认 0.5）
+    parameter integer C2_MILLI = 0,      // c2*1000（零点偏移，默认 0）
+    parameter integer FSHIFT   = 14      // a/b 系数 Q 格式
 ) (
     input  wire                iSysClk,
     input  wire                iSysRst,
@@ -34,6 +36,12 @@ module CompNotch #(
     output reg  signed [W-1:0] oY,         // 陷波后输出（=直流直通）
     output reg                 oValid      // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
+    `include "algo_filt_coef.vh"
+    localparam signed [15:0] P_A1 = fn_notch_a1(FS, FC, C1_MILLI, FSHIFT);
+    localparam signed [15:0] P_A2 = fn_notch_a2(FS, FC, C1_MILLI, FSHIFT);
+    localparam signed [15:0] P_B1 = fn_notch_b1(FS, FC, C2_MILLI, FSHIFT);
+    localparam signed [15:0] P_B2 = fn_notch_b2(FS, FC, C2_MILLI, FSHIFT);
+
     localparam integer LATENCY = 6;                        // 二阶 IIR 流水拍数
     localparam signed [63:0] HALF = (64'sd1 <<< 13);       // Q14 舍入 +0.5 LSB
 

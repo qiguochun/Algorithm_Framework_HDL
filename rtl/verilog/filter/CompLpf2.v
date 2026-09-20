@@ -10,7 +10,7 @@
                         分母 D=(wc^2+sqrt2 wc K+K^2)+(2wc^2-2K^2)z^-1+(wc^2-sqrt2 wc K+K^2)z^-2。
                         差分 y[n]=b0*x[n]+b1*x[n-1]+b2*x[n-2]-a1*y[n-1]-a2*y[n-2]
                         其中 b0=b2=wc^2/C, b1=2wc^2/C, a1=(2wc^2-2K^2)/C, a2=(wc^2-sqrt2 wc K+K^2)/C。
-                        fc/fs 隐含于 Q 系数 localparam（默认 fc=10Hz, fs=5kHz，Python 推导验证）。
+                        系数由 parameter FS/FC 在 elabor 期按上式整数定点算出（默认 fc=10Hz, fs=5kHz）。
                         系数 Q20; 状态带 STATEFRAC 位小数避免 DC 死区偏置(反馈近相消);
                         输出 Q0 舍入+饱和 S16。
                         【多拍流水】乘法一拍(5个乘法并行各自寄存)、b 项求和一拍、合并反馈一拍、
@@ -27,15 +27,10 @@
 //------------------------------------------------------------------------------
 module CompLpf2 #(
     parameter integer W          = 16,     // 信号位宽(有符号)
-    parameter integer FC         = 10,     // 截止频率 Hz（文献/顶层参考，wc=2*pi*FC）
-    parameter integer FS         = 5000,   // 采样率 Hz（文献/顶层参考，Ts=1/FS）
+    parameter integer FC         = 10,     // 截止频率 Hz，wc=2*pi*FC
+    parameter integer FS         = 5000,   // 采样率 Hz，Ts=1/FS
     parameter integer FSHIFT     = 20,     // 系数 Q0.FSHIFT 小数位
-    parameter integer STATEFRAC  = 15,     // 状态(反馈)额外小数位，防 DC 死区
-    parameter integer COEF_B0    = 41,     // b0=wc^2/C =3.91293e-5 *2^20  Q20
-    parameter integer COEF_B1    = 82,     // b1=2wc^2/C =7.82586e-5 *2^20 Q20
-    parameter integer COEF_B2    = 41,     // b2=wc^2/C (=b0)              Q20
-    parameter integer COEF_A1    = -2078518, // a1=(2wc^2-2K^2)/C=-1.98222916 *2^20 Q20
-    parameter integer COEF_A2    = 1030106   // a2=(wc^2-sqrt2 wc K+K^2)/C=0.98238568 *2^20 Q20
+    parameter integer STATEFRAC  = 15      // 状态(反馈)额外小数位，防 DC 死区
 ) (
     input  wire                iSysClk,  // 时钟
     input  wire                iSysRst,  // 复位（高有效）
@@ -44,11 +39,12 @@ module CompLpf2 #(
     output reg  signed [W-1:0] oYOut,    // 低通输出 y[n]
     output reg                 oValid    // 本帧完成标志（iEn 后 LATENCY 拍拉高一拍）
 );
-    // ---- Python 推导验证(Q20, fc=10Hz, fs=5000) ----
-    // b0=b2=3.91293e-5, b1=7.82586e-5, a1=-1.98222916, a2=0.98238568
-    //  2^20+a1Q+a2Q = b0Q+b1Q+b2Q = 164 -> DC 增益精确 =1.0000;
-    // |H|@100Hz ≈ 0.00998（10*fc -> -40dB/dec）；阶跃峰值超调 ≈4.31%(阻尼~0.707)。
-    // 状态 R=y*2^STATEFRAC，分子 num 在 (2^FSHIFT*2^STATEFRAC) 域。
+    `include "algo_filt_coef.vh"
+    localparam integer COEF_B0 = fn_lpf2_b0(FS, FC, FSHIFT); // b0=wc^2/C
+    localparam integer COEF_B1 = fn_lpf2_b1(FS, FC, FSHIFT); // b1=2*b0
+    localparam integer COEF_B2 = COEF_B0;
+    localparam integer COEF_A1 = fn_lpf2_a1(FS, FC, FSHIFT);
+    localparam integer COEF_A2 = fn_lpf2_a2(FS, FC, FSHIFT);
 
     localparam integer LATENCY = 6;                        // 二阶 IIR 流水拍数
     localparam signed [63:0] YMAX = (64'sd1 << (W-1)) - 1;  // 输出上限 32767

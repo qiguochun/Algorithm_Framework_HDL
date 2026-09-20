@@ -3,7 +3,7 @@
 //Moudle Name       :   CompRateLimit.v
 //Original Author   :   HDL-Auto
 //Creation Date     :   2026.09.06
-/*Description       :   限幅速率/斜率限制器（slew rate limiter，C Comp_RateLimit）。
+/*Description       :   限幅速率/斜率限制器（slew rate limiter）。
                         约束 |y[n]-y[n-1]|<=RATE（每采样拍最大允许变化量，参数化）：
                         若 x[n] 相对上一拍输出变化在 RATE 内则直通 y[n]=x[n]；
                         否则按符号以 RATE 追赶上/下界 y[n]=y[n-1]+-RATE。
