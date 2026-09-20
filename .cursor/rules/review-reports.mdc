@@ -1,0 +1,14 @@
+---
+description: 代码审查报告一律写入工程内 reviews/ 目录，不写到 Cursor canvases 或工程外路径
+alwaysApply: true
+---
+
+# 审查报告存放约定
+
+对当前工程做代码审查、架构审查、安全审查或质量审查时：
+
+1. **主交付物**写到工程根目录下的 `reviews/`（若不存在则创建）。
+2. 文件命名：`CODE_REVIEW_YYYY-MM-DD.md`（同日多次可加后缀，如 `_2`、`_rtl`）。
+3. 内容用 Markdown（结论、Critical/Required/Optional、修复顺序）。
+4. **不要**把审查报告只放在 Cursor 的 `canvases/` 或其它工程外路径；画布仅可作可选可视化，正文必须以 `reviews/` 内文件为准。
+5. 在回复里给出该报告的工程内相对路径（如 `reviews/CODE_REVIEW_2026-09-19.md`）。

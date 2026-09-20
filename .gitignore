@@ -1,0 +1,6 @@
+build/
+*.vvp
+*.vcd
+*.csv.fifo
+__pycache__/
+reports/
